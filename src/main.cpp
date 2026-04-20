@@ -4,9 +4,21 @@
 #include <IRremoteESP8266.h>
 #include <IRrecv.h>
 #include <IRutils.h>
+#include <ESP32Servo.h>
+
+static const int servoPin = 14;
+
+Servo servo1;
+
+int motor1A = 13;
+int motor2A = 14;
+int enableA = 27;
+
+const int freq = 20000;
+const int resolution = 8;
 
 // Define the IR receiver pin (GPIO 14)
-const uint16_t IR_RECEIVE_PIN = 14;
+const uint16_t IR_RECEIVE_PIN = 19;
 
 // Create an IRrecv object
 IRrecv irrecv(IR_RECEIVE_PIN);
@@ -17,6 +29,27 @@ decode_results results;
 // Function prototype (required in PlatformIO/C++)
 String decodeKeyValue(uint64_t result);
 
+void stop() {
+    digitalWrite(motor1A, LOW);
+    digitalWrite(motor2A, LOW);
+    ledcWrite(enableA, 0);
+}
+
+void Forward(int spd, int rtime){
+    digitalWrite(motor1A, HIGH);
+    digitalWrite(motor2A, LOW);
+    ledcWrite(enableA, spd);
+    delay(rtime);
+}
+    
+
+void reverse(int spd, int rtime){
+    digitalWrite(motor1A, LOW);
+    digitalWrite(motor2A, HIGH);
+    ledcWrite(enableA, spd);
+    delay(rtime);
+}
+
 void setup() {
   // Start serial communication
   Serial.begin(115200);
@@ -24,6 +57,14 @@ void setup() {
   // Start the IR receiver
   irrecv.enableIRIn();
   Serial.println("IR Receiver Initialized...");
+
+  pinMode(motor1A, OUTPUT);
+  pinMode(motor2A, OUTPUT);
+
+  ledcAttach(enableA, freq, resolution);
+  ledcWrite(enableA, 0);
+
+  servo1.attach(servoPin);
 }
 
 void loop() {
@@ -53,26 +94,17 @@ String decodeKeyValue(uint64_t result) {
 
   switch(val) {
 case 0xFFA25D: return "POWER";
-    case 0xFFE21D: return "FUNC/STOP";
-    case 0xFF629D: return "VOL+";
+    case 0xFF629D:
+      Forward(255, 3000);
+      return "VOL+";
     case 0xFF22DD: return "FAST BACK";
-    case 0xFF02FD: return "PAUSE";
+    case 0xFF02FD: 
+      stop();
+      return "PAUSE";
     case 0xFFC23D: return "FAST FORWARD";
-    case 0xFFE01F: return "DOWN";
-    case 0xFFA857: return "VOL-";
-    case 0xFF906F: return "UP";
-    case 0xFF9867: return "EQ";
-    case 0xFFB04F: return "ST/REPT";
-    case 0xFF6897: return "0";
-    case 0xFF30CF: return "1"; 
-    case 0xFF18E7: return "2"; 
-    case 0xFF7A85: return "3"; 
-    case 0xFF10EF: return "4"; 
-    case 0xFF38C7: return "5"; 
-    case 0xFF5AA5: return "6"; 
-    case 0xFF42BD: return "7"; 
-    case 0xFF4AB5: return "8"; 
-    case 0xFF52AD: return "9"; 
+    case 0xFFA857: 
+      reverse(255, 3000);
+      return "VOL-";
     default:       return "ERROR";
   }
 }
