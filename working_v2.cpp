@@ -27,7 +27,7 @@ IRrecv irrecv(IR_RECEIVE_PIN);
 decode_results results;
 
 // Function prototype (required in PlatformIO/C++)
-String decodeKeyValue(uint64_t result);
+String handleCommand(uint64_t result);
 
 void stop() {
     digitalWrite(motor1A, LOW);
@@ -71,7 +71,7 @@ void loop() {
   // If an IR signal is received
   if (irrecv.decode(&results)) {
     // result.value is a uint64_t in this library
-    String key = decodeKeyValue(results.value);
+    String key = handleCommand(results.value);
     
     if (key != "ERROR") {
       Serial.print("Received: ");
@@ -87,7 +87,7 @@ void loop() {
 }
 
 // Function to decode the value of the IR signal
-String decodeKeyValue(uint64_t result) {
+String handleCommand(uint64_t result) {
   // Note: Standard NEC codes are usually 32-bit. 
   // We cast to uint32_t for the switch case to match your hex codes.
   uint32_t val = (uint32_t)result;

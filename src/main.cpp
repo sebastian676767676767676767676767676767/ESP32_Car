@@ -15,12 +15,16 @@ int enableA = 27;
 
 const int freq = 20000;
 const int resolution = 8;
+const int minSpeed = 200; // Minimum speed to ensure the motor starts moving, adjust as needed
 const int maxLeft = 117;
 const int maxRight = 150;
 const int center = 133;
-unsigned long turnSpeed = 1000; // Time in milliseconds to consider a turn command as active for repeat handling
+unsigned long repeatInterval = 1000; // Time in milliseconds to consider a repeat command as active.
 int turnStep = 1; // Step size for turning the servo
+int speedStep = 1; // Step size for adjusting speed
 int currentAngle = 133; // Start at center position
+
+// TO DO: Create an enum for KeyCodes to improve readability.
 
 
 Servo servo1;
@@ -66,21 +70,30 @@ void turnRight() {
     // Finish this function to turn right, similar to turnLeft but in the opposite direction
 }
 
-void handleTurn(uint32_t key) {
-    if (key == 0xFF22DD) {
-        turnLeft();
-        Serial.println("REPEAT: TURN LEFT");
-    } else if (key == 0xFFC23D) {
-        turnRight();
-        Serial.println("REPEAT: TURN RIGHT");
+void handleRepeat(uint32_t key) {
+    switch (key) {
+        case 0xFF629D:
+            handleCommand(0xFF629D);
+            Serial.println("REPEAT: FORWARD");
+            break;
+        case 0xFFA857:
+            Serial.println("REPEAT: REVERSE");
+            break;
+        case 0xFF22DD:
+            Serial.println("REPEAT: TURN LEFT");
+            break;
+        case 0xFFC23D:
+            Serial.println("REPEAT: TURN RIGHT");
+            break;
     }
 }
 
 // Function to decode the value of the IR signal
-void decodeKeyValue(uint64_t result) {
+void handleCommand(uint64_t result) {
     uint32_t val = (uint32_t)result;
     static uint32_t lastValidKey = 0;
     static unsigned long lastTurnTime = 0;
+    static int speed = 0;
 
     if (val != 0xFFFFFFFF) {
         lastValidKey = val; // Store the last valid key
@@ -88,7 +101,14 @@ void decodeKeyValue(uint64_t result) {
 
     switch(val) {
         case 0xFF629D:
-            forward(255, 3000);
+            if (speed == 255) break;
+            if (speed < 255) speed += speedStep;
+            if (speed > 255) speed = 255; // Cap the speed at 255
+            if (speed < minSpeed) speed = minSpeed; // Ensure speed is above minimum threshold
+
+            digitalWrite(motor1A, HIGH);
+            digitalWrite(motor2A, LOW);
+            ledcWrite(enableA, speed);
             Serial.println("FORWARD");
             break;
         case 0xFFA857:
@@ -108,8 +128,8 @@ void decodeKeyValue(uint64_t result) {
             Serial.println("STOP");
             break;
         case 0xFFFFFFFF:
-            if ((millis() - lastTurnTime) > turnSpeed) {
-                handleTurn(lastValidKey);
+            if ((millis() - lastTurnTime) > repeatInterval) {
+                handleRepeat(lastValidKey);
                 lastTurnTime = millis();
             }
             Serial.println("REPEAT");
@@ -141,7 +161,7 @@ void setup() {
 void loop() {
     // If an IR signal is received
     if (irrecv.decode(&results)) {
-        decodeKeyValue(results.value);
+        handleCommand(results.value);
         irrecv.resume(); // Continue to receive the next signal
     }
 }
