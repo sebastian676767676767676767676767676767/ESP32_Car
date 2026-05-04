@@ -1,5 +1,3 @@
-// https://docs.sunfounder.com/projects/esp32-starter-kit/en/latest/arduino/basic_projects/ar_irremote.html
-
 #include <Arduino.h>
 #include <IRremoteESP8266.h>
 #include <IRrecv.h>
@@ -24,7 +22,6 @@ int turnStep = 1; // Step size for turning the servo
 int speedStep = 1; // Step size for adjusting speed
 int currentAngle = 133; // Start at center position
 
-// TO DO: Create an enum for KeyCodes to improve readability.
 enum KeyCodes : uint32_t {
     FORWARD = 0xFF629D,
     REVERSE = 0xFFA857,
@@ -37,9 +34,7 @@ enum KeyCodes : uint32_t {
 Servo servo1;
 IRrecv irrecv(IR_RECEIVE_PIN);
 
-// Create a decode_results object
 decode_results results;
-
 
 // Function to decode the value of the IR signal
 void handleCommand(uint64_t result) {
